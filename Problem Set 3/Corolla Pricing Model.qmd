@@ -1,0 +1,44 @@
+---
+title: "Corolla Pricing Model"
+format: html
+editor: visual
+---
+
+### Required Installations
+
+After exporting this document, please remember to ensure the following packages are installed on your computer. Then you erase this content from your document/assignment.
+
+-   rmarkdown
+
+-   tidyverse
+
+-   rpart, rpart.plot
+
+-   caret
+
+-   gamlr
+
+------------------------------------------------------------------------
+
+```{r}
+#| message: false
+library(tidyverse)
+library(rpart)
+library(caret)
+```
+
+## Read in and Prepare Data
+
+```{r}
+cars = read_csv("ToyotaCorolla.csv")
+glimpse(cars)
+```
+
+```{r}
+cars = cars %>%
+  select(-Id, -Model, -Mfg_Month)
+```
+
+```{r}
+
+```

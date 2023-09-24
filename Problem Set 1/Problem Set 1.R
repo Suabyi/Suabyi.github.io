@@ -1,0 +1,154 @@
+---
+  title: |
+  ![](long_logo.png){width=4.5in}  
+Data Mining: Problem Set 1
+author: Suabyi Thao^[**Email** sthao19@hamline.edu. **Position** Analytics Student]
+date: "September 13, 2023"
+output: pdf_document
+fontsize: 12pt
+---
+  <!-- 
+  In markdown, the dashes, brackets and exclamation points marking the beginning
+and end of this block of text represent comments. They will not be included as
+text or as code in the document you generate. This can be a handy way to leave
+yourself, teammates, coworkers, etc. important information that travels with the
+document without becoming part of the final output. I will use these comment
+blocks to provide directions to you in this assignment.
+-->
+  ```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+# You may need to run: install.packages("tidyverse")
+# before loading the library.
+library(tidyverse)
+```
+
+<!-- The paragraph below is written as a "block quote" as a sort
+sort of abstract for the document.
+-->
+  > The purpose of this document is to simulataneously analyze data on US crime rates and become more familiar with the syntax and abilities of R-markdown to combine code and analysis in a progressional document.
+> Blockquotes look better in HTML typically, but you can see their general effect in any document.
+> The text is highlighted differently in RStudio so you know its part of the block quote.
+> Also, the margins of the text in the final document are narrower to separate the block quote from normal text.
+
+
+# The Structure of the Data
+
+<!-- You are going to discuss the data we are about to analyze.
+* In the lower-right pane of RStudio, click on the Help tab.
+In the help tab search box, type in USArrests and hit enter.
+Read the provided help file.
+* Write a short paragraph discussing what the data set is about.
+-->
+  This data set contains statistics, in arrests per 100,000 residents for assault, murder, and rape in each of the US states in 1973. It has 50 observations, one for each state. As an additional variable, urban population is also accounted for. Urban population is represented as the percent of the population living in urban areas. 
+
+```{r include=FALSE}
+# Make sure that neither the code nor any of its
+# output is included in the final document.
+
+# Load the data into memory
+data(USArrests)
+```
+
+```{r echo=FALSE}
+# Make sure the code is NOT included, but that the
+# output of the code is included in the final document.
+# Print out information about the "structure" of the dataset.
+(str(USArrests))
+```
+
+<!-- Write a paragraph discussing the structure of the data such as:
+  * How many observations do we have?
+  * How many columns and what are they, how do we interpret their numbers?
+  * What kind of data types do we have for each column?
+  * Whenever you mention a column name, like "Assault", in your paragraph, surround the word with single back-ticks such as `Assault`. This will change the font for that word to monospace and make it look like code.
+-->
+  The data set has 50 observations with 4 columns. These columns are `Murder`, `Assault`, `UrbanPop`, and `Rape`. The `Murder` variable is a numeric data type, as in the `Rape` variable. The `Assault` and `UrbanPop` variables are integers. 
+
+## Summary of Features
+
+```{r}
+# This code should NOT be included, but its output should be.
+knitr::kable(summary(USArrests))
+```
+
+<!-- Discuss the summary.
+* Quickly discuss the mean of each column and interpret the mean values
+based on the definition of the column in the help file.
+* In this paragraph, each time you type a column name, like "Murder"
+surround it in single stars *Murder* so that it will be italicized.
+* In this paragraph, each time you type the word "mean", surround it
+with double stars **mean** so it will be bolded.
+-->
+  Across all 50 states, the **mean** of the *Murder* variable is `r round(mean(USArrests$Murder),2)` arrests for murder per 100,000 people. While the **mean** of *Assault* is `r round(mean(USArrests$Assault),2)` arrests per 100,000 people. *UrbanPop* has a **mean** of `r round(mean(USArrests$UrbanPop),2)`, and *Rape* has a **mean** of `r round(mean(USArrests$Rape),2)`.
+
+```{r echo=TRUE, fig.cap= "Histogram of Scaled Data"}
+# Make sure that this code block shows up in the final document
+# and that the resulting plot does also.
+library(ggplot2)
+library(tidyr)
+scaled_data = as.data.frame(sapply(USArrests, scale))
+ggplot(gather(scaled_data, cols, value), aes(x = value)) + 
+  geom_histogram(aes(y=..density..), bins = 10) + 
+  geom_density(alpha=.2, fill="#FF6666") +
+  facet_grid(.~cols) +
+  ggtitle("Feature Histograms for the Scaled US Arrests Data")
+```
+
+<!-- Scaling the data centered the features at zero
+and allows features to deviate above and below.  Write
+a paragraph describing whether you see any slight skew 
+in the distributions of the features and include it below
+-->
+  It appears that there may be some slight right -skew to the `Murder` variable and perhaps the `Rape` variable. This tells us that for both of these variables the **mean** is greater than the **median**. `Assault` seems to also have a right-skew because its **mean** is a lot greater than its **median**, with a **mean** of `r round(mean(USArrests$Assault),2)` and a **median** of `r round(median(USArrests$Assault),2)`. `UrbanPop` seems to be a left-skew which tells us that the mean is less than the median, with a **mean** of `r round(mean(USArrests$UrbanPop),2)` and a **median** of `r round(median(USArrests$UrbanPop),2)`.
+
+## Relationships Between Features
+
+```{r fig.cap="Facet Grid of Scatter Plots"}
+# We can set options to make the plot result into a figure in the text.
+# This allows it to be numbered, labeled, referred to etc.
+# Add a caption to the figure with fig.cap="..."
+# Make sure the output plot shows up, but make sure the code
+# does not show up in the final document.
+plot(USArrests,
+     main="Scatter Plots of Crime Rates and Urban Population")
+```
+
+<!-- Write a paragraph describing whether you see any relationships
+in terms of correlation between the features of the dataset. Do your
+best to interpret any of these relationships and what they may or may
+not mean.
+-->
+  The scatter plots shows that there may be a positive correlation between `Murder` and `Assault`. Generally, a positive correlation in this case tells us that as population increase, the rate of `Murder` and `Assault` will also increase. The `Rape` variable also seems to show some sort of linear as well. The scatter plot for the `UrbanPop` variable seems to be nonlinear. This tells us that an increase in population may or may not result an increase or decrease in the rate of crime in each state. 
+
+<!--
+  Finally, create a table of the mean values.
+In markdown, we can specify tables using some basic
+text formatting and it will be turned into a nice table.
+For each feature, replace the ___ marks with inline R code,
+you know the `r ` that will insert the mean value of each feature 
+in the table. You can get the mean using,
+mean(USArrests$Murder). For the remaining features, replace
+the Murder part with the feature name as spelled in the dataset.
+-->
+  
+  **Variable** | **Mean**
+  ----- | -----
+  Murder | `r mean(USArrests$Murder)`
+Assault | `r mean(USArrests$Assault)`
+UrbanPop | `r mean(USArrests$UrbanPop)`
+Rape | `r mean(USArrests$Rape)`
+
+
+# Machine Learning Questions
+
+In this section, you will type your paragraph answers to the following questions presented below. Do your best to answer the questions after reading chapter 1 of the textbook and watching the assigned videos.
+
+## What are the 7 basic steps of machine learning?
+The 7 basic steps are: gathering data, data preparation, choosing a model, training, evaluation, parameter tuning, and prediction.
+
+## In your own words, please explain the bias-variance tradeoff in supervised machine learning and make sure to include proper terminology.
+You need bias-variance tradeoff when you try to minimize one error but another error occurs. This is when you will need to try to find the right amount of balance between the bias and variance in order to create an accurate model which is known as the bias-variance tradeoff in supervised machine learning.
+
+## Explain, in your own words, why cross-validation is important and useful.
+Cross-validation is important because it improves the accuracy of your model. It is a way to reduce overfitting and trying to figure out the  parameters that will result in less errors. 
