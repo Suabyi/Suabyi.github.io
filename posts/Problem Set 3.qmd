@@ -1,0 +1,177 @@
+---
+title: "Corolla Pricing Model"
+format: html
+editor: visual
+---
+
+## Step 1
+
+```{r}
+#| message: false
+library(tidyverse)
+library(rmarkdown)
+library(glmnet)
+library(lubridate)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(dummy)
+```
+
+## Step 2
+
+```{r}
+#| message: false
+
+# Read in the data and prep data types.
+cars = read_csv('ToyotaCorolla.csv') %>%
+  select(-Id, -Model, -Mfg_Month, -Cylinders, -Quarterly_Tax) %>%
+  rename(Age = Age_08_04) %>%
+  mutate_at(vars(-one_of(
+    c('Price',
+      'Age',
+      'KM',
+      'HP',
+      'CC',
+      'Weight')
+  )), .funs = factor)
+```
+
+After reading and prepping our data, we can confirm that there are no missing values.
+
+## Step 3
+
+```{r}
+Price = cars$Price
+hist(Price)
+```
+
+Above is the histogram for the price variable. The histogram is not normally distributed. I believe if the linear regression is appropriate, the histogram should look more normally distributed. We have a right-skewed histogram for the price variable which may indicates that the price variable is depended on other variables. As for transformation that we might apply to the *Price* variable in order to make the regression better, we can create another model to show how two or more variables can impact the *Price* variable.
+
+## Step 4
+
+```{r}
+caret::featurePlot(keep(cars, is.numeric), cars$Price, plot = "scatter")
+```
+
+The scatter plots show us the relationship between all the selective variables. We have *HP*, *CC*, *Weight*, *Price*, *Age*, and *KM*. *Price* has a positive, linear correlation. *Age* and *KM* seems to have a negative relationship. *HP* and *CC* shows a vertical line which may indicate that the linear correlation is undefined. The *Weight* scatter plot shows that there could be some negative correlation, but it is mostly undefined.
+
+## Step 5
+
+```{r}
+cars %>%
+  keep(is.numeric) %>%
+  cor() %>%
+  corrplot::corrplot.mixed()
+```
+
+According to the correlation plot, it seems that *Price* and *Age* has a strong, negative correlation. *Age* and *KM* has a medium, positive relationship. *KM* and *HP* has a weak, negative relationship. The relationship between *HP* and *CC* shows almost no relationship. *CC* and *Weight* has a weaker, positive relationship compared to *Age* and *KM*.
+
+## Step 6
+
+```{r}
+set.seed(5970)
+samp = createDataPartition(cars$Price, p = 0.70, list = FALSE)
+training = cars[samp, ]
+testing = cars[-samp, ]
+rm(samp)
+```
+
+## Step 7
+
+```{r}
+train_ctrl = trainControl(method = "repeatedcv", number = 20, repeats = 10)
+tree = train(Price ~ .,
+             data = training,
+             method = "rpart",
+             trControl = train_ctrl,
+             tuneGrid = expand.grid(cp = seq(0.0, 0.1, 0.01)),
+             control = rpart.control(method = "anova", minsplit = 1, minbucket = 1)
+             )
+tree
+```
+
+```{r}
+set.seed(5970)
+fit1 = rpart(Price ~ HP + CC + Weight + Age + KM, data=cars)
+plotcp(fit1)
+```
+
+Pre-pruning is stopping the tree early, before it has completed with classifying the training set while post-pruning is pruning after it has completed.
+
+## Step 8
+
+```{r}
+lm1 = train(Price ~ .,
+            data = training,
+            method = "lm",
+            trControl = trainControl(method="cv", number = 10))
+lm1 
+```
+
+```{r}
+lm1 = train(Price ~ .,
+            data = training,
+            method = "lm",
+            trControl = trainControl(method="cv", number = 10))
+lm1 
+```
+
+```{r}
+summary(lm1)
+```
+
+```{r}
+library(iml)
+library(patchwork)
+lm_predictor = iml::Predictor$new(lm1, data = training)
+lm_imp = iml::FeatureImp$new(lm_predictor, loss = "rmse", compare = "ratio", n.repetitions = 30)
+plot(lm_imp)
+```
+
+```{r}
+lm_imp$results
+```
+
+Based off on the scatter plot, I believe the *Mfg_Year*, *Age*, *KM*, *Weight*, and *HP* have the biggest effect. We might want to remove *CC* because it may not be as significant as we thought it would be initially, and we could remove everything else as well because they may not be significant enough to have a huge effect on the *Price* variable .
+
+## Step 9
+
+```{r}
+set.seed(5970)
+fit1 = rpart(Price ~ HP + Weight + Age + KM, data=cars)
+plotcp(fit1)
+```
+
+## Step 10
+
+```{r}
+tree_predictor = iml::Predictor$new(tree, data = training)
+tree_imp = iml::FeatureImp$new(tree_predictor, loss = "rmse", compare = "ratio", n.repetitions = 30)
+plot(tree_imp)
+```
+
+```{r}
+tree_imp$results
+```
+
+```{r}
+lm_pdp = iml::FeatureEffects$new(lm_predictor,
+                              features = c("HP", "KM", "Weight", "Age"),
+                              method = "pdp+ice")
+plot(lm_pdp)
+```
+
+```{r}
+tree_pdp = iml::FeatureEffects$new(tree_predictor,
+                              features = c("HP", "KM", "Weight", "Age"),
+                              method = "pdp+ice")
+plot(tree_pdp)
+```
+
+```{r}
+lm_interact = iml::Interaction$new(lm_predictor)
+plot(lm_interact)
+```
+
+Overall, we can say that there are four main features that have significant effect on the *Price* variable. They are *HP*, *Weight*, *Age*, and *KM*. The *Age* of a vehicle definitely has the most effect on the price. There are also other features that were taken into consideration by customers when choosing their car such as the color, the model, and many other more! However, those other features do not impact the price of the vehicle; they are just based off on our preferences.
